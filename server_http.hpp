@@ -183,6 +183,8 @@ namespace SimpleWeb {
                 config(port, num_threads), acceptor(io_service),
                 timeout_request(timeout_request), timeout_content(timeout_send_or_receive) {}
         
+        virtual ~ServerBase() { }
+
         virtual void accept()=0;
         
         std::shared_ptr<boost::asio::deadline_timer> set_timeout_on_socket(std::shared_ptr<socket_type> socket, size_t seconds) {
