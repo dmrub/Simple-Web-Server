@@ -12,10 +12,90 @@
 #include <sstream>
 
 namespace SimpleWeb {
-    template <class socket_type>
+
+
+    struct Empty { };
+
+    struct RequestWithMatch
+    {
+        boost::smatch path_match;
+    };
+
+    template <class Socket, class Request, class Response>
+    class ResourceHandler
+    {
+    public:
+
+        typedef Request request_type;
+        typedef Response response_type;
+        typedef Socket socket_type;
+        typedef std::function<void(Response&, std::shared_ptr<Request>)> resource_function_type;
+
+        std::unordered_map<std::string, std::unordered_map<std::string,
+            resource_function_type > >  resource;
+
+        std::unordered_map<std::string,
+            resource_function_type > default_resource;
+
+        void start()
+        {
+            //Copy the resources to opt_resource for more efficient request processing
+            opt_resource.clear();
+            for(auto& res: resource) {
+                for(auto& res_method: res.second) {
+                    auto it=opt_resource.end();
+                    for(auto opt_it=opt_resource.begin();opt_it!=opt_resource.end();opt_it++) {
+                        if(res_method.first==opt_it->first) {
+                            it=opt_it;
+                            break;
+                        }
+                    }
+                    if(it==opt_resource.end()) {
+                        opt_resource.emplace_back();
+                        it=opt_resource.begin()+(opt_resource.size()-1);
+                        it->first=res_method.first;
+                    }
+                    it->second.emplace_back(boost::regex(res.first), res_method.second);
+                }
+            }
+        }
+
+        resource_function_type find_resource(std::shared_ptr<Socket> socket, std::shared_ptr<Request> request)
+        {
+            //Find path- and method-match, and call write_response
+            for(auto& res: opt_resource) {
+                if(request->method==res.first) {
+                    for(auto& res_path: res.second) {
+                        boost::smatch sm_res;
+                        if(boost::regex_match(request->path, sm_res, res_path.first)) {
+                            request->path_match=std::move(sm_res);
+                            return res_path.second;
+                        }
+                    }
+                }
+            }
+            auto it_method=default_resource.find(request->method);
+            if(it_method!=default_resource.end()) {
+                return it_method->second;
+            }
+            return resource_function_type();
+        }
+
+    private:
+        std::vector<std::pair<std::string, std::vector<std::pair<boost::regex,
+            resource_function_type > > > > opt_resource;
+    };
+
+    template <class Socket,
+              class user_request_type = RequestWithMatch,
+              class user_response_type = Empty,
+              template<typename, typename, typename> class user_handler_type = ResourceHandler>
     class ServerBase {
     public:
-        class Response : public std::ostream {
+
+        typedef Socket socket_type;
+
+        class Response : public std::ostream, public user_response_type {
             friend class ServerBase<socket_type>;
         private:
             boost::asio::yield_context& yield;
@@ -56,7 +136,7 @@ namespace SimpleWeb {
             Content(boost::asio::streambuf &streambuf): std::istream(&streambuf), streambuf(streambuf) {}
         };
         
-        class Request {
+        class Request : public user_request_type {
             friend class ServerBase<socket_type>;
         public:
             std::string method, path, http_version;
@@ -65,7 +145,6 @@ namespace SimpleWeb {
 
             std::unordered_multimap<std::string, std::string> header;
 
-            boost::smatch path_match;
             
             std::string remote_endpoint_address;
             unsigned short remote_endpoint_port;
@@ -86,6 +165,8 @@ namespace SimpleWeb {
             }
         };
         
+        typedef std::function<void(Response&, std::shared_ptr<Request>)> resource_function_type;
+
         class Config {
             friend class ServerBase<socket_type>;
         private:
@@ -102,37 +183,11 @@ namespace SimpleWeb {
         ///Set before calling start().
         Config config;
         
-        std::unordered_map<std::string, std::unordered_map<std::string, 
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > >  resource;
-        
-        std::unordered_map<std::string, 
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > default_resource;
-
-    private:
-        std::vector<std::pair<std::string, std::vector<std::pair<boost::regex,
-            std::function<void(typename ServerBase<socket_type>::Response&, std::shared_ptr<typename ServerBase<socket_type>::Request>)> > > > > opt_resource;
-        
     public:
+        user_handler_type<Socket, Request, Response> resource_handler;
+
         void start() {
-            //Copy the resources to opt_resource for more efficient request processing
-            opt_resource.clear();
-            for(auto& res: resource) {
-                for(auto& res_method: res.second) {
-                    auto it=opt_resource.end();
-                    for(auto opt_it=opt_resource.begin();opt_it!=opt_resource.end();opt_it++) {
-                        if(res_method.first==opt_it->first) {
-                            it=opt_it;
-                            break;
-                        }
-                    }
-                    if(it==opt_resource.end()) {
-                        opt_resource.emplace_back();
-                        it=opt_resource.begin()+(opt_resource.size()-1);
-                        it->first=res_method.first;
-                    }
-                    it->second.emplace_back(boost::regex(res.first), res_method.second);
-                }
-            }
+            resource_handler.start();
 
             if(io_service.stopped())
                 io_service.reset();
@@ -307,22 +362,10 @@ namespace SimpleWeb {
         }
 
         void find_resource(std::shared_ptr<socket_type> socket, std::shared_ptr<Request> request) {
-            //Find path- and method-match, and call write_response
-            for(auto& res: opt_resource) {
-                if(request->method==res.first) {
-                    for(auto& res_path: res.second) {
-                        boost::smatch sm_res;
-                        if(boost::regex_match(request->path, sm_res, res_path.first)) {
-                            request->path_match=std::move(sm_res);
-                            write_response(socket, request, res_path.second);
-                            return;
-                        }
-                    }
-                }
-            }
-            auto it_method=default_resource.find(request->method);
-            if(it_method!=default_resource.end()) {
-                write_response(socket, request, it_method->second);
+            resource_function_type resource_function = resource_handler.find_resource(socket, request);
+            if (resource_function)
+            {
+                write_response(socket, request, resource_function);
             }
         }
         
@@ -374,6 +417,7 @@ namespace SimpleWeb {
     template<>
     class Server<HTTP> : public ServerBase<HTTP> {
     public:
+
         Server(unsigned short port, size_t num_threads=1, size_t timeout_request=5, size_t timeout_content=300) : 
                 ServerBase<HTTP>::ServerBase(port, num_threads, timeout_request, timeout_content) {}
         
@@ -381,7 +425,7 @@ namespace SimpleWeb {
         void accept() {
             //Create new socket for this connection
             //Shared_ptr is used to pass temporary objects to the asynchronous functions
-            std::shared_ptr<HTTP> socket(new HTTP(io_service));
+            std::shared_ptr<HTTP> socket(new HTTP(this->io_service));
                         
             acceptor.async_accept(*socket, [this, socket](const boost::system::error_code& ec){
                 //Immediately start accepting a new connection

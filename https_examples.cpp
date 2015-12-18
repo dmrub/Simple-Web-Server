@@ -23,7 +23,7 @@ int main() {
     
     //Add resources using path-regex and method-string, and an anonymous function
     //POST-example for the path /string, responds the posted string
-    server.resource["^/string$"]["POST"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
+    server.resource_handler.resource["^/string$"]["POST"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
         //Retrieve string:
         auto content=request->content.string();
         //request->content.string() is a convenience function for:
@@ -42,7 +42,7 @@ int main() {
     //  "lastName": "Smith",
     //  "age": 25
     //}
-    server.resource["^/json$"]["POST"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
+    server.resource_handler.resource["^/json$"]["POST"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
         try {
             ptree pt;
             read_json(request->content, pt);
@@ -58,7 +58,7 @@ int main() {
     
     //GET-example for the path /info
     //Responds with request-information
-    server.resource["^/info$"]["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
+    server.resource_handler.resource["^/info$"]["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
         stringstream content_stream;
         content_stream << "<h1>Request from " << request->remote_endpoint_address << " (" << request->remote_endpoint_port << ")</h1>";
         content_stream << request->method << " " << request->path << " HTTP/" << request->http_version << "<br>";
@@ -74,7 +74,7 @@ int main() {
     
     //GET-example for the path /match/[number], responds with the matched string in path (number)
     //For instance a request GET /match/123 will receive: 123
-    server.resource["^/match/([0-9]+)$"]["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
+    server.resource_handler.resource["^/match/([0-9]+)$"]["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
         string number=request->path_match[1];
         response << "HTTP/1.1 200 OK\r\nContent-Length: " << number.length() << "\r\n\r\n" << number;
     };
@@ -83,7 +83,7 @@ int main() {
     //Will respond with content in the web/-directory, and its subdirectories.
     //Default file: index.html
     //Can for instance be used to retrieve an HTML 5 client that uses REST-resources on this server
-    server.default_resource["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
+    server.resource_handler.default_resource["GET"]=[](HttpsServer::Response& response, shared_ptr<HttpsServer::Request> request) {
         boost::filesystem::path web_root_path("web");
         if(!boost::filesystem::exists(web_root_path))
             cerr << "Could not find web root." << endl;
