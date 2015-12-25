@@ -21,6 +21,169 @@ namespace SimpleWeb {
         boost::smatch path_match;
     };
 
+    enum HttpStatus
+    {
+        HTTP_NO_STATUS = 0,
+        HTTP_CONTINUE = 100,
+        HTTP_OK = 200,
+        HTTP_CREATED = 201,
+        HTTP_ACCEPTED = 202,
+        HTTP_NO_CONTENT = 204,
+        HTTP_MULTIPLE_CHOICES = 300,
+        HTTP_MOVED_PERMANENTLY = 301,
+        HTTP_MOVED_TEMPORARILY = 302,
+        HTTP_NOT_MODIFIED = 304,
+        HTTP_BAD_REQUEST = 400,
+        HTTP_UNAUTHORIZED = 401,
+        HTTP_FORBIDDEN = 403,
+        HTTP_NOT_FOUND = 404,
+        HTTP_EXPECTATION_FAILED = 417,
+        HTTP_INTERNAL_SERVER_ERROR = 500,
+        HTTP_NOT_IMPLEMENTED = 501,
+        HTTP_BAD_GATEWAY = 502,
+        HTTP_SERVICE_UNAVAILABLE = 503
+    };
+
+    inline const char * getHttpStatusMessage(HttpStatus s)
+    {
+        switch (s)
+        {
+            case HTTP_CONTINUE:
+                return "HTTP/1.1 100 Continue\r\n";
+            case HTTP_OK:
+                return "HTTP/1.1 200 OK\r\n";
+            case HTTP_CREATED:
+                return "HTTP/1.1 201 Created\r\n";
+            case HTTP_ACCEPTED:
+                return "HTTP/1.1 202 Accepted\r\n";
+            case HTTP_NO_CONTENT:
+                return "HTTP/1.1 204 No Content\r\n";
+            case HTTP_MULTIPLE_CHOICES:
+                return "HTTP/1.1 300 Multiple Choices\r\n";
+            case HTTP_MOVED_PERMANENTLY:
+                return "HTTP/1.1 301 Moved Permanently\r\n";
+            case HTTP_MOVED_TEMPORARILY:
+                return "HTTP/1.1 302 Moved Temporarily\r\n";
+            case HTTP_NOT_MODIFIED:
+                return "HTTP/1.1 304 Not Modified\r\n";
+            case HTTP_BAD_REQUEST:
+                return "HTTP/1.1 400 Bad Request\r\n";
+            case HTTP_UNAUTHORIZED:
+                return "HTTP/1.1 401 Unauthorized\r\n";
+            case HTTP_FORBIDDEN:
+                return "HTTP/1.1 403 Forbidden\r\n";
+            case HTTP_NOT_FOUND:
+                return "HTTP/1.1 404 Not Found\r\n";
+            case HTTP_EXPECTATION_FAILED:
+                return "HTTP/1.1 417 Expectation Failed\r\n";
+            case HTTP_INTERNAL_SERVER_ERROR:
+                return "HTTP/1.1 500 Internal Server Error\r\n";
+            case HTTP_NOT_IMPLEMENTED:
+                return "HTTP/1.1 501 Not Implemented\r\n";
+            case HTTP_BAD_GATEWAY:
+                return "HTTP/1.1 502 Bad Gateway\r\n";
+            case HTTP_SERVICE_UNAVAILABLE:
+                return "HTTP/1.1 503 Service Unavailable\r\n";
+            default:
+                return "HTTP/1.1 500 Internal Server Error\r\n";
+        }
+    }
+
+    inline const char * getHtmlStatusMessage(HttpStatus s)
+    {
+        switch (s)
+        {
+            case HTTP_CONTINUE:
+            case HTTP_OK:
+                return "";
+            case HTTP_CREATED:
+                return "<html>"
+                    "<head><title>Created</title></head>"
+                    "<body><h1>201 Created</h1></body>"
+                    "</html>";
+            case HTTP_ACCEPTED:
+                return "<html>"
+                    "<head><title>Accepted</title></head>"
+                    "<body><h1>202 Accepted</h1></body>"
+                    "</html>";
+            case HTTP_NO_CONTENT:
+                return "<html>"
+                    "<head><title>No Content</title></head>"
+                    "<body><h1>204 Content</h1></body>"
+                    "</html>";
+            case HTTP_MULTIPLE_CHOICES:
+                return "<html>"
+                    "<head><title>Multiple Choices</title></head>"
+                    "<body><h1>300 Multiple Choices</h1></body>"
+                    "</html>";
+            case HTTP_MOVED_PERMANENTLY:
+                return "<html>"
+                    "<head><title>Moved Permanently</title></head>"
+                    "<body><h1>301 Moved Permanently</h1></body>"
+                    "</html>";
+            case HTTP_MOVED_TEMPORARILY:
+                return "<html>"
+                    "<head><title>Moved Temporarily</title></head>"
+                    "<body><h1>302 Moved Temporarily</h1></body>"
+                    "</html>";
+            case HTTP_NOT_MODIFIED:
+                return "<html>"
+                    "<head><title>Not Modified</title></head>"
+                    "<body><h1>304 Not Modified</h1></body>"
+                    "</html>";
+            case HTTP_BAD_REQUEST:
+                return "<html>"
+                    "<head><title>Bad Request</title></head>"
+                    "<body><h1>400 Bad Request</h1></body>"
+                    "</html>";
+            case HTTP_UNAUTHORIZED:
+                return "<html>"
+                    "<head><title>Unauthorized</title></head>"
+                    "<body><h1>401 Unauthorized</h1></body>"
+                    "</html>";
+            case HTTP_FORBIDDEN:
+                return "<html>"
+                    "<head><title>Forbidden</title></head>"
+                    "<body><h1>403 Forbidden</h1></body>"
+                    "</html>";
+            case HTTP_NOT_FOUND:
+                return "<html>"
+                    "<head><title>Not Found</title></head>"
+                    "<body><h1>404 Not Found</h1></body>"
+                    "</html>";
+            case HTTP_EXPECTATION_FAILED:
+                return "<html>"
+                    "<head><title>Expectation Failed</title></head>"
+                    "<body><h1>417 Expectation Failed</h1></body>"
+                    "</html>";
+            case HTTP_INTERNAL_SERVER_ERROR:
+                return "<html>"
+                    "<head><title>Internal Server Error</title></head>"
+                    "<body><h1>500 Internal Server Error</h1></body>"
+                    "</html>";
+            case HTTP_NOT_IMPLEMENTED:
+                return "<html>"
+                    "<head><title>Not Implemented</title></head>"
+                    "<body><h1>501 Not Implemented</h1></body>"
+                    "</html>";
+            case HTTP_BAD_GATEWAY:
+                return "<html>"
+                    "<head><title>Bad Gateway</title></head>"
+                    "<body><h1>502 Bad Gateway</h1></body>"
+                    "</html>";
+            case HTTP_SERVICE_UNAVAILABLE:
+                return "<html>"
+                    "<head><title>Service Unavailable</title></head>"
+                    "<body><h1>503 Service Unavailable</h1></body>"
+                    "</html>";
+            default:
+                return "<html>"
+                    "<head><title>Internal Server Error</title></head>"
+                    "<body><h1>500 Internal Server Error</h1></body>"
+                    "</html>";
+        }
+    }
+
     template <class Socket, class T=Empty>
     class Response : public std::ostream, public T {
         template <class _Socket,
@@ -29,7 +192,7 @@ namespace SimpleWeb {
                   class _ResourceHandler> friend class ServerBase;
     public:
         typedef Socket socket_type;
-    private:
+    protected:
         boost::asio::yield_context& yield;
 
         boost::asio::streambuf streambuf;
@@ -51,6 +214,60 @@ namespace SimpleWeb {
                 throw std::runtime_error(ec.message());
         }
     };
+
+    template <class Socket, class T=Empty>
+    class ResponseWithHeader : public Response<Socket, T> {
+        template <class _Socket,
+                  class _Request,
+                  class _Response,
+                  class _ResourceHandler> friend class ServerBase;
+    public:
+        typedef Response<Socket, T> base_type;
+
+        HttpStatus status;
+        std::unordered_multimap<std::string, std::string> header;
+
+    protected:
+        ResponseWithHeader(typename base_type::socket_type &socket, boost::asio::yield_context& yield):
+                base_type(socket, yield), status(HTTP_NO_STATUS), header() {}
+
+    public:
+
+        using base_type::yield;
+        using base_type::size;
+
+        void write_header() {
+            HttpStatus mystatus = status;
+            if (mystatus == HTTP_NO_STATUS)
+                return;
+            status = HTTP_NO_STATUS;
+
+            boost::system::error_code ec;
+
+            {
+                boost::asio::streambuf streambuf;
+                std::ostream oss(&streambuf);
+                oss << getHttpStatusMessage(mystatus);
+                if (header.find("Content-Length") == header.end())
+                    header.insert(std::make_pair("Content-Length", std::to_string(size())));
+                for(auto it = header.begin(), et = header.end(); it != et; ++it) {
+                    oss << it->first << ": " << it->second << "\r\n";
+                }
+                oss << "\r\n";
+
+                boost::asio::async_write(base_type::socket, streambuf, base_type::yield[ec]);
+            }
+
+            if(ec)
+                throw std::runtime_error(ec.message());
+        }
+
+        void flush() {
+            write_header();
+            base_type::flush();
+        }
+    };
+
 
 
     class Content : public std::istream {
