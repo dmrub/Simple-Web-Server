@@ -31,12 +31,13 @@ namespace SimpleWeb {
         HTTP_NO_CONTENT = 204,
         HTTP_MULTIPLE_CHOICES = 300,
         HTTP_MOVED_PERMANENTLY = 301,
-        HTTP_MOVED_TEMPORARILY = 302,
+        HTTP_FOUND = 302,
         HTTP_NOT_MODIFIED = 304,
         HTTP_BAD_REQUEST = 400,
         HTTP_UNAUTHORIZED = 401,
         HTTP_FORBIDDEN = 403,
         HTTP_NOT_FOUND = 404,
+        HTTP_METHOD_NOT_ALLOWED = 405,
         HTTP_EXPECTATION_FAILED = 417,
         HTTP_INTERNAL_SERVER_ERROR = 500,
         HTTP_NOT_IMPLEMENTED = 501,
@@ -62,8 +63,10 @@ namespace SimpleWeb {
                 return "HTTP/1.1 300 Multiple Choices\r\n";
             case HTTP_MOVED_PERMANENTLY:
                 return "HTTP/1.1 301 Moved Permanently\r\n";
-            case HTTP_MOVED_TEMPORARILY:
-                return "HTTP/1.1 302 Moved Temporarily\r\n";
+            case HTTP_FOUND:
+                return "HTTP/1.1 302 Found\r\n";
+            case HTTP_METHOD_NOT_ALLOWED:
+                return "HTTP/1.1 405 Method Not Allowed\r\n";
             case HTTP_NOT_MODIFIED:
                 return "HTTP/1.1 304 Not Modified\r\n";
             case HTTP_BAD_REQUEST:
@@ -121,10 +124,10 @@ namespace SimpleWeb {
                     "<head><title>Moved Permanently</title></head>"
                     "<body><h1>301 Moved Permanently</h1></body>"
                     "</html>";
-            case HTTP_MOVED_TEMPORARILY:
+            case HTTP_FOUND:
                 return "<html>"
-                    "<head><title>Moved Temporarily</title></head>"
-                    "<body><h1>302 Moved Temporarily</h1></body>"
+                    "<head><title>Found</title></head>"
+                    "<body><h1>302 Found</h1></body>"
                     "</html>";
             case HTTP_NOT_MODIFIED:
                 return "<html>"
@@ -150,6 +153,11 @@ namespace SimpleWeb {
                 return "<html>"
                     "<head><title>Not Found</title></head>"
                     "<body><h1>404 Not Found</h1></body>"
+                    "</html>";
+            case HTTP_METHOD_NOT_ALLOWED:
+                return "<html>"
+                    "<head><title>Method Not Allowed</title></head>"
+                    "<body><h1>405 Method Not Allowed</h1></body>"
                     "</html>";
             case HTTP_EXPECTATION_FAILED:
                 return "<html>"
@@ -203,9 +211,14 @@ namespace SimpleWeb {
                 std::ostream(&streambuf), yield(yield), socket(socket) {}
 
     public:
-        size_t size() {
+        size_t size() const {
             return streambuf.size();
         }
+
+        bool flush_required() const {
+            return streambuf.size() > 0;
+        }
+
         void flush() {
             boost::system::error_code ec;
             boost::asio::async_write(socket, streambuf, yield[ec]);
@@ -260,6 +273,10 @@ namespace SimpleWeb {
 
             if(ec)
                 throw std::runtime_error(ec.message());
+        }
+
+        bool flush_required() const {
+            return base_type::flush_required() || (status != HTTP_NO_STATUS);
         }
 
         void flush() {
@@ -623,8 +640,8 @@ namespace SimpleWeb {
                 catch(const std::exception& e) {
                     return;
                 }
-                
-                if(response.size()>0) {
+
+                if(response.flush_required()) {
                     try {
                         response.flush();
                     }
